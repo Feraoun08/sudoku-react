@@ -1,5 +1,9 @@
 sudoku game based off the leet code problems number 36 and 37 distrubted into a react project with all the essential intallation 
 Valid Sudoku :
+
+
+
+
 class Solution(object):
     def isValidSudoku(self, board):
         rows = [set() for _ in range(9)]
@@ -27,7 +31,12 @@ class Solution(object):
         return True
 
 
-solving sudoku :
+solving sudoku :  
+
+
+
+
+
 class Solution(object):
     def solveSudoku(self, board):
 
@@ -86,4 +95,3 @@ class Solution(object):
         backtrack()
 
 
-        
