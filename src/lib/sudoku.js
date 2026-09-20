@@ -248,7 +248,7 @@ export function generateSolvedGrid(rng = Math.random) {
  * reach it without creating a second solution, so it stops early and reports
  * the count it actually achieved.
  */
-export function generatePuzzle({ clues = 36, rng = Math.random } = {}) {
+function digPuzzle({ clues = 36, rng = Math.random } = {}) {
   const target = Math.min(MAX_CLUES, Math.max(17, clues));
   const solution = generateSolvedGrid(rng);
   const puzzle = cloneGrid(solution);
@@ -275,6 +275,40 @@ export function generatePuzzle({ clues = 36, rng = Math.random } = {}) {
   }
 
   return { puzzle, solution, clues: remaining };
+}
+
+const GENERATE_RETRY_LIMIT = 5;
+
+/**
+ * Public entry point. Wraps digPuzzle with a final invariant check before
+ * anything reaches the player: every given must match the solution, no two
+ * givens may clash, and the puzzle must have exactly one solution. None of
+ * this has ever tripped in extensive testing, but a silently broken deal is
+ * bad enough (and rare enough to be hard to catch by playing) that it's
+ * worth the ~1ms this costs to make it structurally impossible to ship one.
+ * On failure it regenerates from scratch, up to GENERATE_RETRY_LIMIT times.
+ */
+export function generatePuzzle(options = {}) {
+  let last = null;
+  for (let attempt = 0; attempt < GENERATE_RETRY_LIMIT; attempt++) {
+    const result = digPuzzle(options);
+    last = result;
+    if (isSoundPuzzle(result.puzzle, result.solution)) return result;
+  }
+  // Practically unreachable — surface it loudly rather than serve a bad grid.
+  console.error('sudoku: generatePuzzle failed its own validity check', GENERATE_RETRY_LIMIT, 'times in a row; serving the last attempt.', last);
+  return last;
+}
+
+function isSoundPuzzle(puzzle, solution) {
+  if (!isComplete(solution) || !isValidSudoku(solution)) return false;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (puzzle[r][c] !== EMPTY && puzzle[r][c] !== solution[r][c]) return false;
+    }
+  }
+  if (findConflicts(puzzle).size > 0) return false;
+  return countSolutions(puzzle, 2) === 1;
 }
 
 /* ------------------------------------------------------------------ *
